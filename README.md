@@ -1,4 +1,6 @@
-<center>![title](img/title.png)</center>
+![title](img/title.png)
+
+
 
 
 # Citation
