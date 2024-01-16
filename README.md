@@ -1,9 +1,9 @@
 ![title](img/title.png)
 ---
 
-### This model needs to be run on GPU/CPUs with at least 80GB of memory
+### !! This model needs to be run on GPU/CPUs with at least 80GB of memory
 
-![example](img/input.jpg)
+<img src="img/input.jpg" width="100"/>
 
 ## Requirements
 
