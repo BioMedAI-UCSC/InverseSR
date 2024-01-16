@@ -2,7 +2,7 @@
 
 ### This model needs to be run on GPU/CPUs with at least 80GB of memory
 
-![example](img/input.png)
+![example](img/input.jpg)
 
 ## Requirements
 
