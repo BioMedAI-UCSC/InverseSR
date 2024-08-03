@@ -232,19 +232,6 @@ def project(
                 perc_loss = (target_features - synth_features).abs().mean()
                 loss += hparams.lambda_perc * perc_loss
 
-                if hparams.downsampling_loss:
-                    downsampling_synth_img = F.interpolate(
-                        synth_img,
-                        scale_factor=1 / hparams.downsampling_loss_factor,
-                        mode="trilinear",
-                    )
-                    downsampling_loss = (
-                        (downsampling_synth_img - downsampling_target_img).abs().mean()
-                    )
-                    loss += hparams.alpha_downsampling_loss * downsampling_loss
-
-                # Don't use prior loss for there is no corruption.
-
             loss.backward(create_graph=False)
 
             return (

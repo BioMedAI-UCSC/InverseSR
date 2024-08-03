@@ -349,10 +349,10 @@ def project(
         cond[0, 3].clone().detach().item(),
     ]
 
-    # Open the file in write mode
+    # Save the statistics result to csv file
     with open(
         # Replace the path with your csv file path
-        "/scratch/j/jlevman/jueqi/thesis_experiments/ddim/result_ddim_mask_9.csv",
+        "./result_ddim_mask_9.csv",
         "a",
     ) as file:
         writer = csv.writer(file)
