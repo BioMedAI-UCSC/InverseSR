@@ -5,8 +5,6 @@
 # [1] Pinaya, W. H., et al. (2022). "Brain Imaging Generation with Latent Diffusion Models." arXiv preprint arXiv:2209.07162.
 # [2] Marinescu, R., et al. (2020). Bayesian Image Reconstruction using Deep Generative Models.
 
-# TODO: remember to check for the tensorboard
-
 import math
 
 # from joblib import dump, load

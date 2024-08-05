@@ -1,12 +1,12 @@
 ![title](img/title.png)
 ---
-We have developed an unsupervised technique for MRI super-resolution. We leverage a recent pre-trained Brain LDM for building powerful image priors over T1w brain MRIs. Our method is capable of being adapted to different settings of MRI SR problems at test time. Our method try to find the optimal latent representation $z^∗$ in the latent space of GAN, which could be mapped to represent the SR MRI $G(z^∗)$.
+We have developed an unsupervised technique for MRI super-resolution. We leverage a recent pre-trained Brain LDM for building powerful image priors over T1w brain MRIs. Our method is capable of being adapted to different settings of MRI SR problems at test time. Our method try to find the optimal latent representation $z^∗$ in the latent space of the Brain LDM, which could be mapped to represent the SR MRI $G(z^∗)$.
 
 <p align="center">
     <img src="img/Method_Detail.gif" width="800" /> 
 </p>
 
-This gif shows the image space of the gradual optimization process when InverseSR tries to find the optimal latent representation $z^∗$.
+This gif shows the image space of the gradual optimization process when InverseSR finds the optimal latent representation $z^∗$.
 <p align="center">
     <img src="img/InverseSR_2.gif" width="300" height="300" /> 
 </p>
@@ -17,7 +17,7 @@ pip install -r requirements.txt
 ```
 
 ## Running InverseSR
-We have given an example of ground truth high-resolution MRI image `./inputs/IXI_T1_069.pth`. Commands and parameters to run **InverseSR** can be found in `job_script/InverseSR(ddim).sh` and `job_script/InverseSR(decoder).sh` file.
+We have given an example of ground truth high-resolution MRI `./inputs/ur_IXI022-Guys-0701-T1.nii.gz`. The code of generating low-resolution MRI is contained in the code. Commands and parameters to run **InverseSR** can be found in `job_script/InverseSR(ddim).sh` and `job_script/InverseSR(decoder).sh` file.
 
 
 ## Data Preparation
