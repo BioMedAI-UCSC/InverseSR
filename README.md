@@ -4,7 +4,7 @@ Implementation of paper "InverseSR: 3D Brain MRI Super-Resolution Using a Latent
 
 
 <p align="center">
-    <img src="img/Method_Detail.gif" width="300" height="300" /> 
+    <img src="img/Method_Detail.gif" /> 
 </p>
 
 <p align="center">
