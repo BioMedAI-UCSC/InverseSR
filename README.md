@@ -3,6 +3,14 @@
 Implementation of paper "InverseSR: 3D Brain MRI Super-Resolution Using a Latent Diffusion Model" of Jueqi Wang, Jacob Levman, Walter Hugo Lopes Pinaya, Petru-Daniel Tudosiu, M. Jorge Cardoso and Razvan Marinescu, in MICCAI 2023.
 
 
+<p align="center">
+    <img src="img/Method_Detail.gif" width="300" height="300" /> 
+</p>
+
+<p align="center">
+    <img src="img/InverseSR_2.gif" width="300" height="300" /> 
+</p>
+
 ## Install Requirements
 ```sh
 pip install -r requirements.txt
