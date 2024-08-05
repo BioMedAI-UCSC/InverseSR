@@ -1,8 +1,6 @@
 ![title](img/title.png)
 ---
-Implementation of paper "InverseSR: 3D Brain MRI Super-Resolution Using a Latent Diffusion Model" of Jueqi Wang, Jacob Levman, Walter Hugo Lopes Pinaya, Petru-Daniel Tudosiu, M. Jorge Cardoso and Razvan Marinescu, in MICCAI 2023.
-
-We have developed an unsupervised technique for MRI superresolution. We leverage a recent pre-trained Brain LDM for building powerful image priors over T1w brain MRIs. Our method is capable of being adapted to different settings of MRI SR problems at test time. Our method try to find the optimal latent representation $z^∗$ in the latent space of GAN, which could be mapped to represent the SR MRI $G(z^∗)$.
+We have developed an unsupervised technique for MRI super-resolution. We leverage a recent pre-trained Brain LDM for building powerful image priors over T1w brain MRIs. Our method is capable of being adapted to different settings of MRI SR problems at test time. Our method try to find the optimal latent representation $z^∗$ in the latent space of GAN, which could be mapped to represent the SR MRI $G(z^∗)$.
 
 <p align="center">
     <img src="img/Method_Detail.gif" width="800" /> 
