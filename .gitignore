@@ -17,6 +17,8 @@ previous_experiment_result/
 project/masks/
 *.npy
 runs/
+result/
+decoder/
 
 # C extensions
 *.so

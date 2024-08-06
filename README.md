@@ -17,8 +17,7 @@ pip install -r requirements.txt
 ```
 
 ## Running InverseSR
-We have given an example of ground truth high-resolution MRI `./inputs/ur_IXI022-Guys-0701-T1.nii.gz`. The code of generating low-resolution MRI is contained in the code. Commands and parameters to run **InverseSR** can be found in `job_script/InverseSR(ddim).sh` and `job_script/InverseSR(decoder).sh` file.
-
+We have given an example of ground truth high-resolution MRI `./inputs/ur_IXI022-Guys-0701-T1.nii.gz`. The code of generating low-resolution MRI is contained. Please download the Brain LDM parameters `ddpm` and `decoder` from [here](https://drive.google.com/drive/folders/110l68um6gUJzECIv0AyF-4Fcw0rrQgA9?usp=drive_link) into the InverseSR folder. Commands and parameters to run **InverseSR** can be found in `job_script/InverseSR(ddim).sh` and `job_script/InverseSR(decoder).sh` file.
 
 ## Data Preparation
 

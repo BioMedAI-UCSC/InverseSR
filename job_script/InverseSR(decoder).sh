@@ -1,6 +1,5 @@
 mkdir outputs
 
-echo -e '\n\n\n'
 echo "$(date +"%T"):  start running model!"
 
 SUBJECT_ID=022
@@ -24,7 +23,6 @@ LOG_DIR=./result/$EXPERIMENT_NAME
 
 python ./project/BRGM_decoder.py \
     --k="$K" \
-    --mean_latent_vector \
     --prior_every=$PRIOR_EVERY \
     --prior_after=$PRIOR_AFTER \
     --num_steps="$NUM_STEPS" \

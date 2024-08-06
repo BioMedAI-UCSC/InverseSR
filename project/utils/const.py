@@ -29,7 +29,6 @@ if COMPUTECANADA:
     OUTPUT_FOLDER = Path(str(TMP)).resolve() / "work" / "outputs"
 else:
     INPUT_FOLDER = Path(__file__).resolve().parent.parent.parent / "inputs"
-    print(INPUT_FOLDER)
     MASK_FOLDER = Path(__file__).resolve().parent.parent / "masks"
     OASIS_FOLDER = Path(__file__).resolve().parent.parent.parent / "data" / "OASIS"
     PRETRAINED_MODEL_FOLDER = (
@@ -48,10 +47,7 @@ else:
         / "vae"
     )
     PRETRAINED_MODEL_DECODER_PATH = (
-        Path(__file__).resolve().parent.parent.parent
-        / "data"
-        / "trained_models"
-        / "decoder"
+        Path(__file__).resolve().parent.parent.parent / "decoder"
     )
     PRETRAINED_MODEL_VGG_PATH = (
         Path(__file__).resolve().parent.parent.parent
