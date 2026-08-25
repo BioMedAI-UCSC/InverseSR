@@ -1,4 +1,7 @@
 ![title](img/title.png)
+
+[![MICCAI](https://img.shields.io/badge/MICCAI-2023-lightblue)](https://link.springer.com/chapter/10.1007/978-3-031-43999-5_42) [![Early Accept](https://img.shields.io/badge/Early%20Accept-Top%2014%25%20of%20Submissions-red)](https://conferences.miccai.org/2023/papers/353-Paper2670.html)
+
 ---
 We have developed an unsupervised technique for MRI super-resolution. We leverage a recent pre-trained Brain LDM for building powerful image priors over T1w brain MRIs. Our method is capable of being adapted to different settings of MRI SR problems at test time. Our method try to find the optimal latent representation $z^∗$ in the latent space of the Brain LDM, which could be mapped to represent the SR MRI $G(z^∗)$.
 
