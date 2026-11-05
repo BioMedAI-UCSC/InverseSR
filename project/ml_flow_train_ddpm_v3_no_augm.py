@@ -21,7 +21,7 @@ from utils.config_train import train_config
 from utils.config_unet_v3 import get_config
 from utils.dataset_v3 import RadioPatchDataset
 from utils.plot_new import comparison_plots_ok, denormalize_data
-from data.data_wrapper import FilteredRadioDataset
+
 
 # --- CONFIGURAZIONE PERCORSI E DIRECTORY ---
 train_cfg, _ = train_config()
@@ -157,18 +157,15 @@ def train():
     
     DATA_DIR = os.path.join(train_cfg.data_dir, "train/npy_patches")
     # 2. Dataset e DataLoader (TRAIN & VALIDATION)
-    raw_dataset = RadioPatchDataset(
+    train_dataset = RadioPatchDataset(
         data_dir=DATA_DIR,
         catalogue_path=train_cfg.catalogue_path,
         in_channels=hparams.in_channels,
         norm_mode=train_cfg.norm_mode,
         cached_stats=train_stats["flux_statistics_filtered"],
     )
-    train_dataset = FilteredRadioDataset(
-        base_dataset=raw_dataset,
-        stats_json_path=f"{DATA_DIR}/dataset_filter_stats.json",
-        mode=train_cfg.norm_mode
-    )
+    
+
 
     train_dataloader = DataLoader(
         train_dataset,
@@ -178,24 +175,21 @@ def train():
         pin_memory=True,
     )
 
-    raw_val_dataset = RadioPatchDataset(
+    val_dataset = RadioPatchDataset(
         data_dir=os.path.join(train_cfg.data_dir, "val/npy_patches"),
         in_channels=hparams.in_channels,
         norm_mode=train_cfg.norm_mode,
         cached_stats=val_stats["flux_statistics_filtered"],
     )
-    val_dataset = FilteredRadioDataset(
-        base_dataset=raw_val_dataset,
-        stats_json_path=os.path.join(train_cfg.data_dir, "val/npy_patches/dataset_filter_stats.json"),
-        mode=train_cfg.norm_mode
-    )
+    
     val_dataloader = DataLoader(
         val_dataset,
         batch_size=train_cfg.batch_size,
-        shuffle=False,
+        shuffle=True,
         num_workers=1,
         pin_memory=True,
     )
+
 
     # 3. Modello DDPM Latente, Ottimizzatore e Scheduler
     model = DDPM(
