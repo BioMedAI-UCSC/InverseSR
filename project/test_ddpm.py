@@ -7,6 +7,7 @@ from skimage.metrics import mean_squared_error as mse
 from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
 import mlflow 
+import json
 
 from torch.utils.data import DataLoader
 from utils.dataset_v3 import RadioPatchDataset
@@ -18,9 +19,9 @@ from models.ddpm_v2_conditioned import DDPM
 
 from models.ddim import DDIMSampler
 from utils.plot_new import denormalize_data, comparison_plots_ok
-from utils.const import IMAGE_SHAPE
 
-SCALE_FACTOR_VAE = 1
+
+
 
 
 def quick_test_metrics(model, vae, dataloader, train_param, hparams, unet_cfg):
@@ -35,13 +36,13 @@ def quick_test_metrics(model, vae, dataloader, train_param, hparams, unet_cfg):
     mses, ssims, psnrs = [], [], []
     
     # Parametri di shape fissi
-    latent_size = IMAGE_SHAPE[2] // 4
+    latent_size = 128 // 4
     shape = (hparams.z_channels, latent_size, latent_size, latent_size)
     ddim_steps = 50 
     use_mask_channel = unet_cfg["params"]["use_mask_channel"]  # Assicurati sia booleano dal tuo argparser
     
     with torch.no_grad():
-        print(f"Totale campioni nel dataset: {len(dataset)}")
+        print(f"Totale campioni nel dataset: {len(dataloader)}")
         print(f"Batch size: {train_param.batch_size}")
         print(f"Totale batch (lunghezza dataloader): {len(dataloader)}")
         for batch_idx, batch in enumerate(dataloader):
@@ -60,7 +61,7 @@ def quick_test_metrics(model, vae, dataloader, train_param, hparams, unet_cfg):
             # --- 1. ENCODING LATENTE VIA VAE ---
             h = vae.encoder(x_start)
             z = vae.quant_conv_mu(h)
-            z = z * SCALE_FACTOR_VAE
+            
 
             # --- 2. PREPARAZIONE MASK LATENT (Se abilitata) ---
             mask_latent = None
@@ -118,7 +119,7 @@ def quick_test_metrics(model, vae, dataloader, train_param, hparams, unet_cfg):
             )
 
             # --- 5. DECODING VAE E METRICHE ---
-            z_gen_unscaled = z_gen / SCALE_FACTOR_VAE
+            z_gen_unscaled = z_gen 
             x_gen = vae.decode(z_gen_unscaled) # x_gen è normalizzato [0, 1]
 
             # Denormalizzazione corretta per calcolare MSE/PSNR in unità fisiche
@@ -126,7 +127,7 @@ def quick_test_metrics(model, vae, dataloader, train_param, hparams, unet_cfg):
             x_gen_denorm = denormalize_data(x_gen, train_param.norm_mode, patch_stats=patch_stats)
             
             # --- SALVATAGGIO PLOTS COMPARATIVI ---
-            if batch_idx % 10 == 0 or batch_idx == len(dataloader) - 1:
+            if batch_idx % 30 == 0 or batch_idx == len(dataloader) - 1:
                 name_real = batch.get("name_x0", [f"Patch_x0_{batch_idx}"])[0]
                 
                 if train_param.cond_key in [None, "None", "none"]:
@@ -201,12 +202,26 @@ if __name__ == "__main__":
     unet_cfg["params"]["out_channels"] = unet_cfg["params"]["out_channels_unet"]
     unet_cfg["params"].pop("out_channels_unet", None)  # Rimuoviamo i parametri specifici del config per evitare confusione
     unet_cfg["params"].pop("in_channels_unet", None)
-    
-    dataset = RadioPatchDataset(
-        data_dir=train_param.test_dir, 
-        in_channels=hparams.in_channels, 
-        norm_mode=train_param.norm_mode)
-    dataloader = DataLoader(dataset, batch_size=train_param.batch_size, shuffle=True, num_workers=1, pin_memory=True, persistent_workers=True)
+    test_stats_path = os.path.join(train_param.test_dir, "dataset_filter_stats.json")
+    if os.path.exists(test_stats_path):
+        with open(test_stats_path, "r") as f:
+            test_stats = json.load(f)
+    else:
+        raise FileNotFoundError(f"File {test_stats_path} non trovato! Esegui prima precompute_stats.py")
+    test_dataset = RadioPatchDataset(
+                data_dir=train_param.test_dir,
+                in_channels=hparams.in_channels,
+                norm_mode=train_param.norm_mode,
+                cached_stats=test_stats["flux_statistics_filtered"],
+            )
+      
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=train_param.batch_size,
+        shuffle=False,
+        num_workers=1,
+        pin_memory=True,
+        )
 
     # Inizializza VAE e DDPM 
     vae = AutoencoderKL(embed_dim=hparams.z_channels, hparams=vars(hparams)).to(train_param.device)
@@ -246,4 +261,4 @@ if __name__ == "__main__":
     else:
         print(f"ATTENZIONE: Checkpoint DDPM non trovato in {ddpm_path}!")
     # Esegui il test rapido
-    quick_test_metrics(model, vae, dataloader, train_param, hparams=hparams, unet_cfg=unet_cfg)
+    quick_test_metrics(model, vae, test_dataloader, train_param, hparams=hparams, unet_cfg=unet_cfg)

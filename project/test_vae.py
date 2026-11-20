@@ -14,7 +14,6 @@ from models.aekl_no_attention import AutoencoderKL
 from utils.config_train import train_config
 from utils.config_aekl_v3 import get_hparams
 from utils.plot_new import denormalize_data, comparison_plots_ok
-from data.data_wrapper import FilteredRadioDataset
 
 import numpy as np
 from skimage.metrics import peak_signal_noise_ratio as skimage_psnr
@@ -97,24 +96,14 @@ def test(hparams, train_param):
     device = train_param.device
     os.makedirs(train_param.test_fig, exist_ok=True)
     print(f"Stai usando il dispositivo: {device}")
-    test_stats_path = os.path.join(train_param.test_dir, "dataset_filter_stats.json")
-    if os.path.exists(test_stats_path):
-        with open(test_stats_path, "r") as f:
-            test_stats = json.load(f)
-    else:
-        raise FileNotFoundError(f"File {test_stats_path} non trovato! Esegui prima precompute_stats.py")
+    
     # 2. Dataset di Test
-    raw_test_dataset = RadioPatchDataset(
+    test_dataset = RadioPatchDataset(
             data_dir=train_param.test_dir,
             in_channels=hparams.in_channels,
             norm_mode=train_param.norm_mode,
-            cached_stats=test_stats["flux_statistics_filtered"],
         )
-    test_dataset = FilteredRadioDataset(
-        base_dataset=raw_test_dataset,
-        stats_json_path=os.path.join(train_param.test_dir, "dataset_filter_stats.json"),
-        mode="clip"  # "clip" taglia i picchi al valore max, "zero" li azzera
-        )
+  
     test_dataloader = DataLoader(
         test_dataset,
         batch_size=train_param.batch_size,
