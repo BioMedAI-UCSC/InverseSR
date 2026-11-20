@@ -140,9 +140,9 @@ def plot_patch_inspection(
 
 if __name__ == "__main__":
     # 1. Configurazione percorsi
-    DATA_DIR = Path("../../data/inputs/16x128x128_cont_ldev_OK/test/npy_patches")
+    DATA_DIR = Path("../../data/inputs/HI_128x128x128_stride64/test/npy_patches")
     SAVE_CLEAN = False  # Imposta a True per salvare le patch valide in una nuova cartella
-    OUTPUT_DIR = Path("../../data/inputs/16x128x128_cont_ldev_OK/test_clean")
+    OUTPUT_DIR = Path("../../data/inputs/HI_128x128x128_stride64/test_clean")
 
     # 2. Controllo e caricamento file .npy
     file_paths = sorted(list(DATA_DIR.glob("*.npy")))
