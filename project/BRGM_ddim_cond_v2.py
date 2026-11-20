@@ -206,7 +206,6 @@ def project(
     hparams: Namespace,
     patch_stats: dict = None,
     verbose: bool = False,
-    file_names: list = ("patch_000000.npy", "lr_patch.npy"),
 ):
     # 1. CATALOGUE INITIAL SETUP & CONDITIONING
     cat = {}
@@ -565,7 +564,6 @@ def main(hparams: Namespace) -> None:
         hparams=hparams,
         patch_stats=patch_stats,
         verbose=True,
-        file_names=file_names
     )
 
     save_path = hparams.output_dir_BRGM_ddim
