@@ -1,8 +1,11 @@
 import os
+import signal
+import sys
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy.io import fits
@@ -10,21 +13,33 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 
+# =============================================================================
+# GESTIONE INTERRUZIONE FORZATA (Ctrl+C)
+# =============================================================================
+def hard_stop(sig, frame):
+    print("\n[!] Interruzione forzata ricevuta (Ctrl+C). Uscita immediata...")
+    os._exit(1)
+
+
+signal.signal(signal.SIGINT, hard_stop)
+
+
+# =============================================================================
+# GENERAZIONE GIF ANIMATE 3D
+# =============================================================================
 def create_3d_slice_gif(patch_dir, output_gif_dir, num_samples=3):
     """Crea GIF animate con rotazione 3D del cubo e piani di taglio lungo l'asse Z."""
     os.makedirs(output_gif_dir, exist_ok=True)
-    
-    all_files = [f for f in os.listdir(patch_dir) if f.endswith('.npy')]
+
+    all_files = [f for f in os.listdir(patch_dir) if f.endswith(".npy")]
     if not all_files:
         print(f"❌ Nessun file .npy trovato in: {patch_dir}")
         return
 
     sample_patches = np.random.choice(
-        all_files, 
-        size=min(num_samples, len(all_files)), 
-        replace=False
+        all_files, size=min(num_samples, len(all_files)), replace=False
     )
-    
+
     for patch_id in sample_patches:
         file_path = os.path.join(patch_dir, patch_id)
 
@@ -37,7 +52,7 @@ def create_3d_slice_gif(patch_dir, output_gif_dir, num_samples=3):
         vmin = 0.0
 
         fig = plt.figure(figsize=(9, 8))
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.add_subplot(111, projection="3d")
 
         X_grid, Y_grid = np.meshgrid(np.arange(width_X), np.arange(height_Y))
 
@@ -47,13 +62,16 @@ def create_3d_slice_gif(patch_dir, output_gif_dir, num_samples=3):
             slice_2d = data[z_slice_idx, :, :]
 
             ax.plot_surface(
-                X_grid, 
-                Y_grid, 
+                X_grid,
+                Y_grid,
                 np.full_like(X_grid, z_slice_idx),
-                rstride=2, cstride=2,
-                facecolors=plt.cm.inferno((slice_2d - vmin) / (vmax - vmin + 1e-8)),
+                rstride=2,
+                cstride=2,
+                facecolors=plt.cm.inferno(
+                    (slice_2d - vmin) / (vmax - vmin + 1e-8)
+                ),
                 shade=False,
-                alpha=0.85
+                alpha=0.85,
             )
 
             ax.set_xlim(0, width_X)
@@ -63,23 +81,28 @@ def create_3d_slice_gif(patch_dir, output_gif_dir, num_samples=3):
             ax.set_xlabel("X (Pixel)")
             ax.set_ylabel("Y (Pixel)")
             ax.set_zlabel("Z (Canali / Profondità)")
-            
+
             angle = (frame / depth_Z) * 360
             ax.view_init(elev=25, azim=angle)
-            ax.set_title(f"Patch 3D: {patch_id}\nScansione Z = {z_slice_idx}/{depth_Z-1}")
+            ax.set_title(
+                f"Patch 3D: {patch_id}\nScansione Z = {z_slice_idx}/{depth_Z-1}"
+            )
 
         ani = animation.FuncAnimation(
             fig, update, frames=range(depth_Z), interval=150
         )
-        
+
         gif_filename = f"3d_cube_{os.path.splitext(patch_id)[0]}.gif"
         save_path = os.path.join(output_gif_dir, gif_filename)
-        
-        ani.save(save_path, writer='pillow', fps=6)
+
+        ani.save(save_path, writer="pillow", fps=6)
         plt.close(fig)
         print(f"✅ GIF 3D salvata: {save_path}")
 
 
+# =============================================================================
+# ESTRAZIONE PATCH FAST & LOW-MEMORY
+# =============================================================================
 def process_radio_blind_split(
     fits_path,
     output_dir,
@@ -90,156 +113,204 @@ def process_radio_blind_split(
     data_name="",
     output_format="npy",
     skip_empty=False,
-    empty_threshold=2e-5
+    empty_threshold=2e-5,
 ):
-    """Estrae i patch 3D in modalità blind e li suddivide in train, val e test set."""
+    """Estrae i patch 3D in modalità blind ottimizzata per la memoria RAM e li suddivide in train, val e test set."""
     assert sum(splits) == 1.0, "La somma delle frazioni di split deve fare 1.0"
 
-    print(f"\nApertura FITS: {fits_path}")
-    hdul = fits.open(fits_path, memmap=True, mode="readonly", ignore_missing_simple=True)
-    raw_data_ref = hdul[0].data
+    print(f"\nApertura FITS in Memory-Map: {fits_path}")
+    hdul = fits.open(
+        fits_path, memmap=True, mode="readonly", ignore_missing_simple=True
+    )
+    raw_data_ref = hdul[0].data if hdul[0].data is not None else hdul[1].data
     shape = raw_data_ref.shape
-    
+
     Z, Y, X = shape[1:] if len(shape) == 4 else shape
     print(f"Dimensioni Cubo: Z={Z}, Y={Y}, X={X}")
 
-    # 1. Generazione di tutti i ritagli in memoria e selezione coordinate
-    all_patches = []
+    # 1. Scansione rapida e salvataggio solo delle coordinate (Leggerissimo in RAM)
+    # 1. Scansione rapida caricando 1 fetta Z intera in RAM alla volta
+    valid_coords = []
     patch_count = 0
     skipped_count = 0
 
-    print("Scansione cubo 3D e ritaglio in corso...")
+    print("Scansione rapida coordinate cubo 3D (Ottimizzata in RAM)...")
+    
+    # Se il cubo ha 4 dimensioni (1, Z, Y, X), prendiamo il riferimento 3D
+    data_3d = raw_data_ref[0] if len(shape) == 4 else raw_data_ref
+
     for z in tqdm(range(0, Z - patch_size[0] + 1, stride), desc="Z-axis"):
+        # CARICAMENTO IN RAM: Carichiamo l'intero blocco Z necessario per il patch (es. 128 fette)
+        # Questo fa 1 singola lettura sequenziale da disco invece di centinaia di letture casuali!
+        z_chunk = np.array(data_3d[z : z + patch_size[0]], dtype=np.float32)
+
         for y in range(0, Y - patch_size[1] + 1, stride):
             for x in range(0, X - patch_size[2] + 1, stride):
+                
+                # Slicing in RAM (istantaneo)
+                d_slice = z_chunk[:, y : y + patch_size[1], x : x + patch_size[2]]
 
-                if len(raw_data_ref.shape) == 4:
-                    d_slice = raw_data_ref[0, z:z+patch_size[0], y:y+patch_size[1], x:x+patch_size[2]]
-                else:
-                    d_slice = raw_data_ref[z:z+patch_size[0], y:y+patch_size[1], x:x+patch_size[2]]
-
-                # 1. Gestisci prima i NaN
-                nan_mask = np.isnan(d_slice)
-                if np.all(nan_mask):
-                    # Il patch è interamente NaN (fuori mappa)
+                # Check NaN / Vuoto in RAM
+                if np.isnan(d_slice).all():
                     skipped_count += 1
                     continue
 
-                p_data = np.nan_to_num(np.array(d_slice, dtype=np.float32), nan=0.0)
+                if skip_empty:
+                    max_val = np.nanmax(np.abs(d_slice))
+                    if max_val < (3 * empty_threshold):
+                        skipped_count += 1
+                        continue
 
-                # 2. Controllo combinato su RMS/Dev Standard e Valore Massimo
-                rms_val = np.sqrt(np.mean(p_data**2))
-                max_val = np.max(np.abs(p_data))
-
-                # Esempio: un patch è vuoto se sia il rumore RMS che il picco massimo sono sotto la soglia
-                if skip_empty and (rms_val < empty_threshold or max_val < (3 * empty_threshold)):
-                    skipped_count += 1
-                    continue
-
-                base_name = f"patch_{patch_count:06d}"
-                all_patches.append({
-                    "base_name": base_name,
-                    "data": p_data,
-                    "x": x, "y": y, "z": z,
-                    "max_intensity": float(np.max(p_data)),
-                    "mean_intensity": float(np.mean(p_data))
-                })
+                valid_coords.append(
+                    {
+                        "base_name": f"patch_{patch_count:06d}",
+                        "x": x,
+                        "y": y,
+                        "z": z,
+                    }
+                )
                 patch_count += 1
 
-    hdul.close()
-    print(f"Estratti {len(all_patches)} patch validi. Scartati {skipped_count} patch vuoti.")
-
-    # 2. Calcolo degli Split (Train / Val / Test)
+    # 2. Calcolo degli Split (Train / Val / Test) sulle sole coordinate
     train_ratio, val_ratio, test_ratio = splits
-    
-    # Primo split: dividi Train da (Val + Test)
-    train_data, val_test_data = train_test_split(
-        all_patches, train_size=train_ratio, random_state=seed, shuffle=True
+
+    train_coords, val_test_coords = train_test_split(
+        valid_coords, train_size=train_ratio, random_state=seed, shuffle=True
     )
-    
-    # Secondo split: dividi Val e Test proporzionalmente
+
     relative_val_ratio = val_ratio / (val_ratio + test_ratio)
-    # Controlla quanti elementi ci sono prima dello split
-    if len(val_test_data) == 1:
-        val_data = val_test_data
-        test_data = []
+    if len(val_test_coords) <= 1:
+        val_coords = val_test_coords
+        test_coords = []
     else:
-        val_data, test_data = train_test_split(
-            val_test_data, train_size=relative_val_ratio, random_state=seed, shuffle=True
+        val_coords, test_coords = train_test_split(
+            val_test_coords,
+            train_size=relative_val_ratio,
+            random_state=seed,
+            shuffle=True,
         )
 
     split_datasets = {
-        "train": train_data,
-        "val": val_data,
-        "test": test_data
+        "train": train_coords,
+        "val": val_coords,
+        "test": test_coords,
     }
 
-    # 3. Salvataggio su disco organizzato per sotto-cartelle
-    for subset_name, subset_patches in split_datasets.items():
+    # 3. Estrazione dei dati e Salvataggio su disco (Un patch alla volta)
+    for subset_name, subset_coords in split_datasets.items():
+        if not subset_coords:
+            continue
+
         subset_dir = os.path.join(output_dir, subset_name)
-        
         npy_dir = os.path.join(subset_dir, "npy_patches")
         fits_dir = os.path.join(subset_dir, "fits_patches")
-        
-        if output_format in ["npy", "both"]: os.makedirs(npy_dir, exist_ok=True)
-        if output_format in ["fits", "both"]: os.makedirs(fits_dir, exist_ok=True)
+
+        if output_format in ["npy", "both"]:
+            os.makedirs(npy_dir, exist_ok=True)
+        if output_format in ["fits", "both"]:
+            os.makedirs(fits_dir, exist_ok=True)
 
         records = []
-        for item in subset_patches:
+        print(f"\nScrittura patch su disco: [{subset_name.upper()}]...")
+
+        for item in tqdm(subset_coords, desc=f"Salvando {subset_name}"):
             base_name = item["base_name"]
-            p_data = item["data"]
             x, y, z = item["x"], item["y"], item["z"]
+
+            # Estrazione del dato singolo
+            if len(shape) == 4:
+                d_slice = raw_data_ref[
+                    0,
+                    z : z + patch_size[0],
+                    y : y + patch_size[1],
+                    x : x + patch_size[2],
+                ]
+            else:
+                d_slice = raw_data_ref[
+                    z : z + patch_size[0],
+                    y : y + patch_size[1],
+                    x : x + patch_size[2],
+                ]
+
+            p_data = np.nan_to_num(
+                np.array(d_slice, dtype=np.float32), nan=0.0
+            )
 
             # Salvataggio .npy
             if output_format in ["npy", "both"]:
-                np.save(os.path.join(npy_dir, f"{base_name}_{data_name}.npy"), p_data[np.newaxis, ...])
+                file_npy_path = os.path.join(
+                    npy_dir, f"{base_name}_{data_name}.npy"
+                )
+                np.save(file_npy_path, p_data[np.newaxis, ...])
 
             # Salvataggio .fits
             if output_format in ["fits", "both"]:
                 patch_header = fits.Header()
-                patch_header["NAXIS1"], patch_header["NAXIS2"], patch_header["NAXIS3"] = patch_size[2], patch_size[1], patch_size[0]
-                fits.writeto(os.path.join(fits_dir, f"{base_name}.fits"), p_data, patch_header, overwrite=True)
+                (
+                    patch_header["NAXIS1"],
+                    patch_header["NAXIS2"],
+                    patch_header["NAXIS3"],
+                ) = (patch_size[2], patch_size[1], patch_size[0])
+                fits.writeto(
+                    os.path.join(fits_dir, f"{base_name}.fits"),
+                    p_data,
+                    patch_header,
+                    overwrite=True,
+                )
 
-            records.append({
-                "patch_id": f"{base_name}.npy",
-                "global_x_min": x, "global_x_max": x + patch_size[2],
-                "global_y_min": y, "global_y_max": y + patch_size[1],
-                "global_z_min": z, "global_z_max": z + patch_size[0],
-                "max_intensity": item["max_intensity"],
-                "mean_intensity": item["mean_intensity"],
-            })
+            records.append(
+                {
+                    "patch_id": f"{base_name}_{data_name}.npy",
+                    "global_x_min": x,
+                    "global_x_max": x + patch_size[2],
+                    "global_y_min": y,
+                    "global_y_max": y + patch_size[1],
+                    "global_z_min": z,
+                    "global_z_max": z + patch_size[0],
+                    "max_intensity": float(np.max(p_data)),
+                    "mean_intensity": float(np.mean(p_data)),
+                }
+            )
 
         # Salva indice CSV per ogni sotto-insieme
-        pd.DataFrame(records).to_csv(os.path.join(subset_dir, f"{subset_name}_index.csv"), index=False)
-        print(f" Subset [{subset_name.upper()}]: Salvati {len(subset_patches)} patch in {subset_dir}")
+        pd.DataFrame(records).to_csv(
+            os.path.join(subset_dir, f"{subset_name}_index.csv"), index=False
+        )
+        print(
+            f" Subset [{subset_name.upper()}]: Salvati {len(subset_coords)} patch in {subset_dir}"
+        )
+
+    hdul.close()
+    print("\n✅ Elaborazione completata con successo!")
 
 
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
 if __name__ == "__main__":
-    FILENAME = "N1566_J0419_54"
-    DATA_DIR_NAME="HI_128x128x128_stride64"
-    FITS_PATH = "/leonardo_scratch/large/userexternal/gvitanza/InverseSR/data/inputs/comb_N1566_J0419_54_HI_r15_t0_mg095_2.image.fits"
+    FILENAME = "sky_ldev"
+    DATA_DIR_NAME = "HI_128x128x128_stride64"
+    FITS_PATH = "/leonardo_scratch/large/userexternal/gvitanza/sky_ldev_v2.fits"
     BASE_OUT_DIR = f"/leonardo_scratch/large/userexternal/gvitanza/InverseSR/data/inputs/{DATA_DIR_NAME}"
 
-    # 1. Generazione e Split dei Patch
+    """ # 1. Generazione e Split dei Patch
     process_radio_blind_split(
         fits_path=FITS_PATH,
         output_dir=BASE_OUT_DIR,
-        patch_size=(128, 128, 128),
-        stride=64,
+        patch_size=(256, 256, 256),
+        stride=128,
         splits=(0.8, 0.1, 0.1),  # 80% Train, 10% Validation, 10% Test
         seed=42,
         data_name=FILENAME,
         output_format="npy",
-        skip_empty=True
+        skip_empty=True,
     )
-
+ """
     # 2. Generazione GIF animate di verifica dal subset Train
     print("\n--- Generazione GIF di Verifica (Train Set) ---")
-    NPY_TRAIN_DIR = os.path.join(BASE_OUT_DIR, "train", "npy_patches")
+    NPY_TRAIN_DIR = os.path.join(BASE_OUT_DIR, "test", "npy_patches")
     PLOT_GIF_DIR = os.path.join(BASE_OUT_DIR, "gifs_verification")
-    
+
     create_3d_slice_gif(
-        patch_dir=NPY_TRAIN_DIR,
-        output_gif_dir=PLOT_GIF_DIR,
-        num_samples=3
-    ) 
+        patch_dir=NPY_TRAIN_DIR, output_gif_dir=PLOT_GIF_DIR, num_samples=5
+    )
