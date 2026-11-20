@@ -43,16 +43,18 @@ class ForwardDownsample(ForwardAbstract):
     def __init__(self, factor, target_size=None):
         self.factor = factor
         self.target_size = target_size # Es: [32, 32, 32] o [20, 28, 20]
-
-    def __call__(self, x):        
+    
+    def __call__(self, x):   
+        k = int(self.factor)
+        return F.avg_pool3d(x, kernel_size=k, stride=k)     
         # Metodo originale
-        return F.interpolate(
+        """ return F.interpolate(
             x,
             scale_factor=1 / self.factor,
             mode="trilinear",
             recompute_scale_factor=True,
             align_corners=False,
-        )
+        ) """
 
 class ForwardFillMask(ForwardAbstract):
     def __init__(self, device, mask: Optional[np.ndarray] = None):
