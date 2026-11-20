@@ -245,7 +245,7 @@ def optimize_latent_patch(
     target_img_corrupted: torch.Tensor,
     device: torch.device,
     hparams: Namespace,
-    patch_size: tuple = (16, 128, 128),
+    patch_size: tuple = (128, 128, 128),
     cat: dict = None,
     mask_latent: torch.Tensor = None,
     vgg16: torch.nn.Module = None,
@@ -462,8 +462,9 @@ def project(
             cond=cond_payload, 
             hparams=hparams
         )
-
-        synth_img_np = best_synth_img[0, 0].detach().cpu().numpy()
+        # NUOVO CODICE (Converte bfloat16 -> float32 prima di NumPy)
+        synth_img_np = best_synth_img[0, 0].detach().float().cpu().numpy()
+        
         synth_phys_full = denormalize_data(synth_img_np, norm_mode=hparams.norm_data, patch_stats=patch_stats)
         synth_phys_crop = crop_center_3d(synth_phys_full, crop_size)
 
@@ -629,7 +630,7 @@ def reconstruct_large_crop_tiling(
             target_img_corrupted=batch_lr,
             device=device,
             hparams=hparams,
-            patch_size=(16, patch_size[0], patch_size[1]),
+            patch_size=(128, patch_size[0], patch_size[1]),
             cat=cat,
             mask_latent=batch_mask_latent,
             vgg16=vgg16,
@@ -793,7 +794,7 @@ def main(hparams: Namespace) -> None:
         crop_h=crop_h,
         crop_w=crop_w,
         device=device,
-        target_depth=16,
+        target_depth=128,
         norm_mode=hparams.norm_data
     )
 
@@ -810,7 +811,7 @@ def main(hparams: Namespace) -> None:
         crop_h=crop_h_lr,
         crop_w=crop_w_lr,
         device=device,
-        target_depth=4,
+        target_depth=32,
         norm_mode=hparams.norm_data
     )
 
