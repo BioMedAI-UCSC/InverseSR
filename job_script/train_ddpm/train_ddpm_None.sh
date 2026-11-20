@@ -1,16 +1,16 @@
 #!/bin/bash
 
-#SBATCH --job-name=ddpm_None
+#SBATCH --job-name=g1ddpm_None
 #SBATCH --partition=boost_usr_prod
 #SBATCH --qos=boost_qos_lprod
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
-#SBATCH --time=24:00:00
+#SBATCH --time=4-00:00:00
 #SBATCH --account=IscrC_DATIV-ML
-#SBATCH --output=ddpm_None_HI_global1_vae_best_%j.out
-#SBATCH --error=ddpm_None_HI_global1_vae_best_%j.err
-
+#SBATCH --output=ddpm_None_HI_g1_Vae300_lr1e-5_%j.out
+#SBATCH --error=ddpm_None_HI_g1_Vae300_lr1e-5_%j.err
+#SBATCH --mem=160G
 
 module purge
 
@@ -23,12 +23,13 @@ HOME=/leonardo/home/userexternal/gvitanza/
 source ${HOME}/.venv/bin/activate
 
 
-DATASET=HI_datamix_128x128x128_stride64
-EPOCHS=50
+DATASET=HI_128x128x128_stride64
+EPOCHS=400
 Z_CHANNELS=3
 NORM_MODE='global_1'
 COND='None'
-EXPERIMENT_NAME=${COND}_${EPOCHS}_z${Z_CHANNELS}_${NORM_MODE}_${DATASET}_vae_best
+LR=1e-5
+EXPERIMENT_NAME=${COND}_${EPOCHS}_z${Z_CHANNELS}_${NORM_MODE}_${DATASET}_${LR}_NEWFILTER
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python3 ${SCRATCH}/project/ml_flow_train_ddpm_v3_no_augm.py\
     --data_dir "${SCRATCH}/data/inputs/${DATASET}"\
@@ -39,9 +40,9 @@ python3 ${SCRATCH}/project/ml_flow_train_ddpm_v3_no_augm.py\
     --epochs $EPOCHS\
     --z_channels $Z_CHANNELS\
     --norm_mode $NORM_MODE\
-    --learning_rate 1e-4\
+    --learning_rate $LR\
     --cond_key $COND\
-    --vae_path "${SCRATCH}/vae_decoder_3_300epochs_global_1_Oct30_16-14-13/vae_best_model.pth"\
+    --vae_path "${SCRATCH}/vae_decoder_HI_128x128x128_stride64_3_300epochs_global_1_Nov18_15-58-29/vae_best_model.pth"\
     --no-use_mask_channel \
     --no-use_spatial_transformer \
-    --batch_size 1\
+    --batch_size 2\

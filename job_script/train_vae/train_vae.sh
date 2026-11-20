@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=glob1HInewAct
+#SBATCH --job-name=logHI128
 #SBATCH --partition=boost_usr_prod
 #SBATCH --qos=boost_qos_lprod
 #SBATCH --nodes=1
@@ -8,8 +8,8 @@
 #SBATCH --gres=gpu:1
 #SBATCH --time=4-00:00:00
 #SBATCH --account=IscrC_DATIV-ML
-#SBATCH --output=vae_glob1_HI_128_batch2_%j.out
-#SBATCH --error=vae_glob1_HI_128_batch2_%j.err
+#SBATCH --output=vae_g1_HI_128_lr1e-5_%j.out
+#SBATCH --error=vae_g1_HI_128_lr1e-5_%j.err
 #SBATCH --mem=160G
 
 
@@ -24,10 +24,11 @@ HOME=/leonardo/home/userexternal/gvitanza/
 source ${HOME}/.venv/bin/activate
 
 DATASET=HI_128x128x128_stride64
-EPOCHS=100
+EPOCHS=300
 Z_CHANNELS=3
 NORM_MODE='global_1'
-EXPERIMENT_NAME=${EPOCHS}_z${Z_CHANNELS}_${NORM_MODE}_${DATASET}_newActivationFun
+LR=1e-5
+EXPERIMENT_NAME=${EPOCHS}_z${Z_CHANNELS}_${NORM_MODE}_${DATASET}_${LR}_NEWOUTLIERS_FILTER
 
 python3 ${SCRATCH}/project/ml_flow_train_vae_decoder_no_augm.py\
     --data_dir "${SCRATCH}/data/inputs/${DATASET}"\
@@ -35,6 +36,6 @@ python3 ${SCRATCH}/project/ml_flow_train_vae_decoder_no_augm.py\
     --output_dir_vae "${SCRATCH}/data/trained_model_paper/vae_decoder_${EXPERIMENT_NAME}"\
     --z_channels $Z_CHANNELS\
     --norm_mode $NORM_MODE\
-    --learning_rate 1e-4\
+    --learning_rate $LR\
     --epochs $EPOCHS\
     --batch_size 2\
