@@ -30,20 +30,6 @@ hparams, _ = get_hparams()
 BASE_SCRATCH = "/leonardo_scratch/large/userexternal/gvitanza/InverseSR/"
 RUN_DIR = train_cfg.output_dir_ddpm
 current_time = datetime.now().strftime("%b%d_%H-%M-%S")
-train_stats_path = os.path.join(train_cfg.data_dir, "train/npy_patches/dataset_filter_stats.json")
-val_stats_path = os.path.join(train_cfg.data_dir, "val/npy_patches/dataset_filter_stats.json")
-
-if os.path.exists(train_stats_path):
-    with open(train_stats_path, "r") as f:
-        train_stats = json.load(f)
-else:
-    raise FileNotFoundError(f"File {train_stats_path} non trovato! Esegui prima precompute_stats.py")
-
-if os.path.exists(val_stats_path):
-    with open(val_stats_path, "r") as f:
-        val_stats = json.load(f)
-else:
-    raise FileNotFoundError(f"File {val_stats_path} non trovato! Esegui prima precompute_stats.py")
 
 print("Inizio configurazione MLFlow...")
 db_path = "mlruns_ddpm.db"
@@ -162,7 +148,6 @@ def train():
         catalogue_path=train_cfg.catalogue_path,
         in_channels=hparams.in_channels,
         norm_mode=train_cfg.norm_mode,
-        cached_stats=train_stats["flux_statistics_filtered"],
     )
     
 
@@ -179,7 +164,6 @@ def train():
         data_dir=os.path.join(train_cfg.data_dir, "val/npy_patches"),
         in_channels=hparams.in_channels,
         norm_mode=train_cfg.norm_mode,
-        cached_stats=val_stats["flux_statistics_filtered"],
     )
     
     val_dataloader = DataLoader(
